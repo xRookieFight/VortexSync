@@ -1,0 +1,27 @@
+[package]
+name = "vortexsync"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.89"
+description = "Keep Vortex Studio projects in git: sync .vrtx files with a folder of Luau and JSON"
+license = "MIT"
+repository = "https://github.com/xRookieFight/VortexSync"
+readme = "README.md"
+keywords = ["vortex", "luau", "gamedev", "sync", "rojo"]
+categories = ["command-line-utilities", "game-development"]
+
+[profile.release]
+strip = true
+lto = true
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+notify = "8.2.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+vortexstudio-mcp = { git = "https://github.com/xRookieFight/VortexStudio-MCP", tag = "v1.1.0", version = "1.1.0", default-features = false }
+
+[dev-dependencies]
+tempfile = "3.27.0"

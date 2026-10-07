@@ -1,0 +1,24 @@
+name: Bug report
+description: Something synced wrong, failed, or lost data
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran, what you expected and what you got, including the full output.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: vortexsync --version, Vortex Studio version and your OS.
+      placeholder: vortexsync 1.0.0, Studio 0.6.1, Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: If a file failed to build or extract, paste it here, or attach the .vrtx (zip it if GitHub refuses the extension).
