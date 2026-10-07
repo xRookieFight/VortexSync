@@ -146,11 +146,11 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 Side::Files => Prefer::Files,
                 Side::Studio => Prefer::Studio,
             });
-            println!(
-                "watching {}/ and {}, Ctrl+C to stop",
-                p.config.source, p.config.output
-            );
             serve::serve(&p, prefer, |note| match note {
+                Note::Watching => println!(
+                    "watching {}/ and {}, Ctrl+C to stop",
+                    p.config.source, p.config.output
+                ),
                 Note::Built {
                     instances,
                     problems,

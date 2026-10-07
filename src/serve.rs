@@ -14,6 +14,8 @@ use crate::ops::{self, Prefer, Synced};
 const QUIET: Duration = Duration::from_millis(400);
 
 pub enum Note {
+    /// The watchers are registered, changes from now on will be seen.
+    Watching,
     Built {
         instances: usize,
         problems: String,
@@ -118,6 +120,7 @@ pub fn serve(
         None => in_conflict = false,
     };
 
+    report(Note::Watching);
     handle(step(p, prefer), &mut report);
     loop {
         // wait for something that matters
@@ -157,6 +160,14 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
+    fn wait_until_watching(ready: &mpsc::Receiver<()>) {
+        ready
+            .recv_timeout(Duration::from_secs(10))
+            .expect("watcher never started");
+        // FSEvents on macOS only reports changes made after its stream really started
+        std::thread::sleep(Duration::from_millis(500));
+    }
+
     // drives the real watcher: edit a file and wait for the .vrtx to follow
     #[test]
     fn file_edits_reach_the_vrtx() {
@@ -165,9 +176,14 @@ mod tests {
         let notes = Arc::new(Mutex::new(Vec::new()));
         let sink = notes.clone();
         let project = p.clone();
+        let (ready_tx, ready_rx) = mpsc::channel();
         std::thread::spawn(move || {
             let result = serve(&project, None, |n| {
                 let label = match n {
+                    Note::Watching => {
+                        let _ = ready_tx.send(());
+                        return;
+                    }
                     Note::Built { .. } => "built".to_string(),
                     Note::Extracted { .. } => "extracted".to_string(),
                     Note::Conflict => "conflict".to_string(),
@@ -177,7 +193,7 @@ mod tests {
             });
             eprintln!("serve returned: {:?}", result.err());
         });
-        std::thread::sleep(Duration::from_millis(300));
+        wait_until_watching(&ready_rx);
         fs::write(dir.path().join("src/Workspace/Watched.part.json"), "{}").unwrap();
 
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -204,10 +220,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = ops::init(dir.path(), "Watch", None, None).unwrap();
         let project = p.clone();
+        let (ready_tx, ready_rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let _ = serve(&project, None, |_| {});
+            let _ = serve(&project, None, |n| {
+                if matches!(n, Note::Watching) {
+                    let _ = ready_tx.send(());
+                }
+            });
         });
-        std::thread::sleep(Duration::from_millis(300));
+        wait_until_watching(&ready_rx);
 
         let mut game = vortexstudio_mcp::store::load(&p.output_path()).unwrap();
         vortexstudio_mcp::scene::create(
