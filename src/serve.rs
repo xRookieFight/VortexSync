@@ -72,16 +72,22 @@ pub fn serve(
     prefer: Option<Prefer>,
     mut report: impl FnMut(Note),
 ) -> Result<(), String> {
+    // watchers report real paths (macOS turns /var into /private/var), so compare
+    // against real paths too or symlinked folders never match
+    let real = |path: &Path| fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     let src = p.source_dir();
-    let output = p.output_path();
     fs::create_dir_all(&src).map_err(|e| format!("can't create {}: {e}", src.display()))?;
+    let src = real(&src);
+    let output = p.output_path();
     let out_dir = output
         .parent()
         .filter(|d| !d.as_os_str().is_empty())
         .map(Path::to_path_buf)
         .unwrap_or_else(|| p.root.clone());
+    let out_dir = real(&out_dir);
+    let output = out_dir.join(output.file_name().unwrap_or_default());
     let ignore = [
-        p.state_dir(),
+        real(&p.state_dir()),
         out_dir.join(vortexstudio_mcp::store::BACKUP_DIR),
     ];
 
